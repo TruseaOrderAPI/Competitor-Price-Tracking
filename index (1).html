@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TruSea Competitor Pricing</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1b2430; --mute:#667085; --line:#d9dee5; --head:#1f3a5f; --ok:#16794c; --bad:#b42318; --warn:#9a6700; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--head); color:#fff; padding:12px 20px; display:flex; flex-wrap:wrap; gap:12px 28px; align-items:center; }
+  header h1 { margin:0; font-size:18px; letter-spacing:.04em; }
+  header .meta { font-size:12px; opacity:.9; display:flex; gap:18px; flex-wrap:wrap; }
+  header .spacer { flex:1; }
+  button { font:inherit; padding:6px 12px; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:4px; cursor:pointer; }
+  button:hover { background:#eef1f5; }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  button.primary { background:#fff; color:var(--head); font-weight:700; border-color:#fff; padding:8px 16px; }
+  button.small { padding:2px 8px; font-size:12px; }
+  main { padding:16px 20px 40px; max-width:1500px; margin:0 auto; }
+  #runline { margin:0 0 12px; font-size:13px; color:var(--mute); min-height:18px; }
+  #runline.err { color:var(--bad); }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:16px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:10px 12px; }
+  .kpi b { display:block; font-size:24px; }
+  .kpi span { color:var(--mute); font-size:12px; }
+  nav { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:12px; }
+  nav button { border:none; border-bottom:3px solid transparent; border-radius:0; background:none; padding:8px 14px; }
+  nav button.on { border-bottom-color:var(--head); font-weight:700; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center; }
+  input[type=text], input[type=password], select { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+  input[type=text].wide { min-width:260px; }
+  .tbl { overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:6px; max-height:62vh; }
+  table { border-collapse:collapse; width:100%; }
+  th, td { padding:6px 9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; white-space:nowrap; }
+  td.wrap { white-space:normal; min-width:200px; }
+  th { background:#eef1f5; position:sticky; top:0; cursor:pointer; user-select:none; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+  td.n, th.n { text-align:right; }
+  tr.click:hover td { background:#f3f7fb; }
+  .ok { color:var(--ok); font-weight:600; } .bad { color:var(--bad); font-weight:600; } .warn { color:var(--warn); font-weight:600; } .mute { color:var(--mute); }
+  #detail { margin-top:18px; background:var(--card); border:1px solid var(--line); border-radius:6px; padding:14px 16px; display:none; }
+  #detail h2 { margin:0 0 8px; font-size:16px; }
+  #detail h3 { margin:16px 0 6px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--mute); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px; }
+  .cell { border:1px solid var(--line); border-radius:4px; padding:8px 10px; }
+  .cell span { display:block; font-size:11px; color:var(--mute); text-transform:uppercase; }
+  .cell b { font-size:16px; }
+  .panel { display:none; } .panel.on { display:block; }
+  #settings { display:none; background:#fff; border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:14px; }
+  #settings label { display:block; margin:6px 0 2px; font-size:12px; color:var(--mute); }
+  #settings input { width:100%; max-width:640px; }
+  .note { font-size:12px; color:var(--mute); margin:6px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TRUSEA COMPETITOR PRICING</h1>
+  <div class="meta">
+    <div>Last Updated: <b id="mUpdated">-</b></div>
+    <div>Last Analysis Run: <b id="mRun">-</b></div>
+    <div>Analysis Status: <b id="mStatus">-</b></div>
+  </div>
+  <div class="spacer"></div>
+  <button id="bSettings">Settings</button>
+  <button id="bRefresh">Refresh</button>
+  <button id="bRun" class="primary">RUN COMPETITOR ANALYSIS</button>
+</header>
+<main>
+  <div id="settings">
+    <label>Apps Script Web App URL (ends with /exec)</label>
+    <input type="text" id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <label>Token (same value as TOKEN in Code.gs)</label>
+    <input type="password" id="cfgToken">
+    <p class="note">Stored only in this browser (localStorage). Nothing is sent anywhere except your own Apps Script URL.</p>
+    <button id="bSave">Save and load</button>
+  </div>
+  <p id="runline"></p>
+  <section class="kpis" id="kpis"></section>
+
+  <nav id="tabs">
+    <button data-t="pricing" class="on">Pricing</button>
+    <button data-t="review">Review Queue</button>
+    <button data-t="history">Price History</button>
+    <button data-t="errors">Errors</button>
+  </nav>
+
+  <div class="panel on" id="p-pricing">
+    <div class="bar">
+      <input type="text" class="wide" id="fSearch" placeholder="Search product, competitor...">
+      <select id="fStatus"><option value="">All statuses</option><option>RECOMMENDED</option><option>REVIEW REQUIRED</option><option>NO VALID COMPETITOR</option></select>
+      <select id="fMargin"><option value="">All margin checks</option><option>SAFE</option><option>UNSAFE</option><option>UNKNOWN</option></select>
+      <select id="fStock"><option value="">Any stock situation</option><option value="has">Has IN-STOCK competitor</option><option value="none">No IN-STOCK competitor</option></select>
+      <select id="fComp"><option value="">All lowest competitors</option></select>
+      <span class="mute" id="fCount"></span>
+    </div>
+    <div class="tbl"><table id="tPricing"></table></div>
+    <div id="detail"></div>
+  </div>
+
+  <div class="panel" id="p-review">
+    <div class="bar">
+      <input type="text" class="wide" id="rSearch" placeholder="Search review queue...">
+      <select id="rType"><option value="">All issue types</option></select>
+      <span class="mute" id="rCount"></span>
+    </div>
+    <div class="tbl"><table id="tReview"></table></div>
+  </div>
+
+  <div class="panel" id="p-history">
+    <div class="bar">
+      <input type="text" class="wide" id="hSearch" placeholder="Search history...">
+      <label><input type="checkbox" id="hChanged"> changed only</label>
+      <span class="mute" id="hCount"></span>
+    </div>
+    <div class="tbl"><table id="tHistory"></table></div>
+  </div>
+
+  <div class="panel" id="p-errors">
+    <div id="errBox"></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var KEY = 'trusea_pricing_cfg';
+  var cfg = {}; try { cfg = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  var D = null, sel = null, sort = { pricing: { k: 'TruSea Product', d: 1 }, review: { k: 'Issue Type', d: 1 }, history: { k: 'Run Time', d: -1 } };
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function n(v, d) { if (v === '' || v === null || v === undefined || isNaN(Number(v))) return ''; return Number(v).toLocaleString('en-IN', { maximumFractionDigits: d === undefined ? 2 : d }); }
+  function rs(v) { var x = n(v); return x === '' ? '' : '₹' + x; }
+  function pc(v) { return (v === '' || v === null || isNaN(Number(v))) ? '' : (Number(v) * 100).toFixed(1) + '%'; }
+  function cls(s) { s = String(s); if (/RECOMMENDED|^SAFE|IN STOCK|VALID FOR/.test(s) && !/NOT|NO /.test(s)) return 'ok'; if (/REVIEW|UNKNOWN|STALE|AMBIG/.test(s)) return 'warn'; if (/UNSAFE|OUT OF|NO VALID|EXCLUDED|FAILED/.test(s)) return 'bad'; return ''; }
+
+  /* ---------- JSONP api ---------- */
+  function api(params, ms) {
+    return new Promise(function (res, rej) {
+      if (!cfg.url) return rej(new Error('Set the Apps Script URL in Settings'));
+      var cb = 'cb' + Date.now() + Math.floor(Math.random() * 1e6), s = document.createElement('script');
+      var t = setTimeout(function () { cleanup(); rej(new Error('No response from Apps Script (check deployment access = Anyone, URL and token)')); }, ms || 60000);
+      function cleanup() { clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
+      window[cb] = function (d) { cleanup(); res(d); };
+      s.onerror = function () { cleanup(); rej(new Error('Script load failed - check the Web App URL')); };
+      var q = new URLSearchParams(Object.assign({ token: cfg.token || '', callback: cb }, params));
+      s.src = cfg.url + (cfg.url.indexOf('?') < 0 ? '?' : '&') + q.toString();
+      document.head.appendChild(s);
+    });
+  }
+  function say(msg, bad) { var e = $('runline'); e.textContent = msg || ''; e.className = bad ? 'err' : ''; }
+
+  /* ---------- load + render ---------- */
+  function load() {
+    say('Loading...');
+    return api({ action: 'data' }).then(function (d) {
+      if (!d.ok) throw new Error(d.error || 'Unknown error');
+      D = d; $('mUpdated').textContent = new Date().toLocaleString('en-IN');
+      render(); say('');
+    }).catch(function (e) { say(e.message, true); });
+  }
+  function render() {
+    var st = D.status || {};
+    $('mRun').textContent = st.finishedAt || (D.log.length ? D.log[D.log.length - 1]['Finished'] : '-') || '-';
+    $('mStatus').textContent = st.state === 'error' ? 'FAILED' : (st.state === 'running' ? 'RUNNING' : (st.state === 'done' ? 'COMPLETED' : (D.products.length ? 'COMPLETED' : 'NO RUN YET')));
+    var k = D.kpis, cards = [['Total TruSea Products', k.totalProducts], ['Products Analyzed', k.analyzed], ['Products With Valid Competitor Data', k.withValid], ['IN-STOCK Competitor Products', k.inStockRows],
+      ['Products Needing Review', k.needReview], ['Price Changes Today', k.changedToday], ['Products With No Valid Competitor', k.noValid], ['Potential Low Margin Products', k.lowMargin]];
+    $('kpis').innerHTML = cards.map(function (c) { return '<div class="kpi"><b>' + esc(c[1]) + '</b><span>' + esc(c[0]) + '</span></div>'; }).join('');
+    var comps = {}; D.products.forEach(function (p) { if (p['Competitor']) comps[p['Competitor']] = 1; });
+    var cur = $('fComp').value; $('fComp').innerHTML = '<option value="">All lowest competitors</option>' + Object.keys(comps).sort().map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''); $('fComp').value = cur;
+    var types = {}; D.review.forEach(function (r) { types[r['Issue Type']] = 1; });
+    var rcur = $('rType').value; $('rType').innerHTML = '<option value="">All issue types</option>' + Object.keys(types).sort().map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''); $('rType').value = rcur;
+    renderPricing(); renderReview(); renderHistory(); renderErrors();
+    if (sel) showDetail(sel, true);
+  }
+  function lowestMap() { var m = {}; D.lowest.forEach(function (l) { m[l['Master Product ID']] = l; }); return m; }
+  function sorter(tab) { var s = sort[tab]; return function (a, b) { var x = a[s.k], y = b[s.k]; var nx = parseFloat(x), ny = parseFloat(y); if (!isNaN(nx) && !isNaN(ny) && String(x) !== '' && String(y) !== '') return (nx - ny) * s.d; return String(x).localeCompare(String(y)) * s.d; }; }
+  function head(cols, tab) { return '<thead><tr>' + cols.map(function (c) { return '<th class="' + (c.n ? 'n' : '') + '" data-tab="' + tab + '" data-k="' + esc(c.k) + '">' + esc(c.h) + (sort[tab] && sort[tab].k === c.k ? (sort[tab].d > 0 ? ' ▲' : ' ▼') : '') + '</th>'; }).join('') + '</tr></thead>'; }
+
+  function renderPricing() {
+    var low = lowestMap(), q = $('fSearch').value.toLowerCase(), fs = $('fStatus').value, fm = $('fMargin').value, fk = $('fStock').value, fc = $('fComp').value;
+    var rows = D.products.filter(function (p) {
+      var l = low[p['Master Product ID']] || {};
+      if (fs && p['Final Status'] !== fs) return false; if (fm && p['Margin Check'] !== fm) return false;
+      if (fk === 'has' && !(Number(p['Valid Competitors']) > 0)) return false; if (fk === 'none' && Number(p['Valid Competitors']) > 0) return false;
+      if (fc && p['Competitor'] !== fc) return false;
+      if (q && (p['TruSea Product'] + ' ' + p['Competitor'] + ' ' + (l['Competitor Product'] || '')).toLowerCase().indexOf(q) < 0) return false; return true;
+    }).sort(sorter('pricing'));
+    $('fCount').textContent = rows.length + ' of ' + D.products.length + ' products';
+    var cols = [{ h: 'Product', k: 'TruSea Product' }, { h: 'TruSea Pack', k: 'TruSea Pack Weight' }, { h: 'Lowest IN-STOCK Competitor', k: 'Competitor' }, { h: 'Competitor', k: 'Competitor' },
+      { h: 'Competitor ₹/kg', k: 'Lowest Competitor ₹/kg', n: 1 }, { h: 'Target ₹/kg', k: 'Market Target ₹/kg', n: 1 }, { h: 'Target Pack Price', k: 'Market Target Pack Price', n: 1 },
+      { h: 'Current Price', k: 'Current TruSea Price', n: 1 }, { h: 'Difference', k: 'Price Difference', n: 1 }, { h: 'Margin Status', k: 'Margin Check' }, { h: 'Status', k: 'Final Status' }, { h: 'Action', k: 'Master Product ID' }];
+    $('tPricing').innerHTML = head(cols, 'pricing') + '<tbody>' + rows.map(function (p) {
+      var l = low[p['Master Product ID']] || {}, diff = p['Price Difference'];
+      return '<tr class="click" data-id="' + esc(p['Master Product ID']) + '"><td>' + esc(p['TruSea Product']) + '</td><td>' + esc(p['TruSea Pack Weight']) + '</td><td class="wrap">' + esc(l['Competitor Product'] || '') + '</td><td>' + esc(p['Competitor']) + '</td>' +
+        '<td class="n">' + rs(p['Lowest Competitor ₹/kg']) + '</td><td class="n">' + rs(p['Market Target ₹/kg']) + '</td><td class="n">' + rs(p['Market Target Pack Price']) + '</td><td class="n">' + rs(p['Current TruSea Price']) +
+        '</td><td class="n ' + (diff === '' ? '' : (diff < 0 ? 'ok' : (diff > 0 ? 'warn' : ''))) + '">' + (diff === '' ? '' : (diff > 0 ? '+' : '') + n(diff)) + '</td><td class="' + cls(p['Margin Check']) + '">' + esc(p['Margin Check']) + '</td><td class="' + cls(p['Final Status']) + '">' + esc(p['Final Status']) + '</td><td><button class="small">View</button></td></tr>';
+    }).join('') + '</tbody>';
+  }
+
+  function showDetail(id, keep) {
+    sel = id; var p = D.products.filter(function (x) { return x['Master Product ID'] === id; })[0]; if (!p) return;
+    var l = lowestMap()[id] || null, rows = D.daily.filter(function (d) { return d['Master Product ID'] === id; }), mm = {}; D.matches.forEach(function (m) { mm[m.id] = m; });
+    var comps = {}; D.daily.forEach(function (d) { comps[d['Competitor']] = 1; });
+    var present = {}; rows.forEach(function (r) { present[r['Competitor']] = 1; });
+    var h = '<h2>' + esc(p['TruSea Product']) + ' <span class="mute">' + esc(id) + ' · pack ' + esc(p['TruSea Pack Weight']) + '</span></h2>';
+    h += '<h3>Competitor breakdown</h3><div class="tbl" style="max-height:none"><table><thead><tr><th>Competitor</th><th>Competitor product</th><th>Weight</th><th class="n">Price</th><th class="n">₹/kg</th><th>Stock</th><th>Pricing status</th><th>Match approved</th><th>Notes</th><th>Manual review</th></tr></thead><tbody>';
+    rows.sort(function (a, b) { return String(a['Competitor']).localeCompare(b['Competitor']) || a['Normalized ₹/kg'] - b['Normalized ₹/kg']; }).forEach(function (r) {
+      var m = mm[r['Match ID']] || {}, ov = m.override ? ' <span class="warn">override: ' + esc(m.override) + '</span>' : '';
+      h += '<tr><td>' + esc(r['Competitor']) + '</td><td class="wrap">' + esc(r['Competitor Product']) + '<br><a href="' + esc(r['URL']) + '" target="_blank" rel="noopener">open page</a></td><td>' + esc(r['Weight (raw)']) + (r['Weight (g)'] !== '' ? '<br><span class="mute">' + n(r['Weight (g)'], 0) + ' g used</span>' : '') + '</td>' +
+        '<td class="n">' + rs(r['Price']) + '<br><span class="mute">' + esc(r['Price Source']) + '</span></td><td class="n">' + rs(r['Normalized ₹/kg']) + '</td><td class="' + cls(r['Stock Status']) + '">' + esc(r['Stock Status']) + ov + '</td>' +
+        '<td class="' + cls(r['Pricing Status']) + '">' + esc(r['Pricing Status']) + '</td><td class="' + (m.use === 'YES' ? 'ok' : (m.use === 'NO' ? 'bad' : 'warn')) + '">' + esc(m.use || '') + '<br><span class="mute">' + esc(m.status || '') + ' / ' + esc(m.conf || '') + '</span></td>' +
+        '<td class="wrap mute">' + esc(r['Notes']) + '</td><td><button class="small" data-act="use" data-m="' + esc(r['Match ID']) + '" data-v="YES">Use</button> <button class="small" data-act="use" data-m="' + esc(r['Match ID']) + '" data-v="NO">Not comparable</button><br>' +
+        '<button class="small" data-act="stock" data-m="' + esc(r['Match ID']) + '" data-v="IN STOCK">In stock</button> <button class="small" data-act="stock" data-m="' + esc(r['Match ID']) + '" data-v="OUT OF STOCK">Out of stock</button> <button class="small" data-act="stock" data-m="' + esc(r['Match ID']) + '" data-v="CLEAR">Clear</button></td></tr>';
+    });
+    Object.keys(comps).forEach(function (c) { if (!present[c]) h += '<tr><td>' + esc(c) + '</td><td colspan="9" class="mute">No match for this product</td></tr>'; });
+    h += '</tbody></table></div><p class="note">Manual changes are written to the Competitor Matches sheet. Stock overrides expire after ' + 24 + ' hours. Run the analysis again to apply them.</p>';
+    h += '<h3>Result</h3><div class="grid">' +
+      cell('Lowest valid competitor', l ? rs(l['Lowest Valid Competitor ₹/kg']) + '/kg · ' + esc(l['Competitor']) : 'None (no IN-STOCK comparable competitor)') +
+      cell('Market target (' + Math.round(D.rules.targetFactor * 100) + '%)', p['Market Target ₹/kg'] === '' ? '-' : rs(p['Market Target ₹/kg']) + '/kg → ' + rs(p['Market Target Pack Price']) + ' per ' + esc(p['TruSea Pack Weight'])) +
+      cell('Current TruSea price', rs(p['Current TruSea Price']) || '-') +
+      cell('Avg purchase rate (last 3)', p['Avg Purchase Rate ₹/kg'] === '' ? 'Missing' : rs(p['Avg Purchase Rate ₹/kg']) + '/kg · last ' + esc(String(p['Last Purchase Date']).slice(0, 10))) +
+      cell('Wastage / net cost', (p['Wastage %'] === '' ? 'Wastage missing' : pc(p['Wastage %'])) + (p['Net Cost ₹/kg'] === '' ? '' : ' · ' + rs(p['Net Cost ₹/kg']) + '/kg')) +
+      cell('Safe price (min)', p['Minimum Safe Price'] === '' ? 'Unknown' : rs(p['Minimum Safe Price']) + ' (margin ' + pc(D.rules.margin) + ')') +
+      cell('Margin check', '<span class="' + cls(p['Margin Check']) + '">' + esc(p['Margin Check']) + '</span>' + (p['Margin at Market Target'] === '' ? '' : ' · ' + pc(p['Margin at Market Target']) + ' at target')) +
+      cell('Final recommended price', p['Final Recommended Price'] === '' ? '<span class="warn">Not recommended</span>' : rs(p['Final Recommended Price'])) +
+      cell('Final status', '<span class="' + cls(p['Final Status']) + '">' + esc(p['Final Status']) + '</span>') + '</div>';
+    if (p['Review Reason']) h += '<p class="warn">Review reason: ' + esc(p['Review Reason']) + '</p>';
+    var hh = D.history.filter(function (x) { return x['Master Product ID'] === id; }).slice(-8).reverse();
+    if (hh.length) h += '<h3>Recent history</h3><div class="tbl" style="max-height:none"><table><thead><tr><th>Run</th><th class="n">Competitor ₹/kg</th><th>Lowest</th><th class="n">Target pack</th><th>Status</th></tr></thead><tbody>' +
+      hh.map(function (x) { return '<tr><td>' + esc(x['Run Time']) + '</td><td class="n">' + rs(x['Current Competitor ₹/kg']) + '</td><td>' + esc(x['Lowest Competitor']) + '</td><td class="n">' + rs(x['Current Target Pack']) + '</td><td>' + esc(x['Final Status']) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    var el = $('detail'); el.innerHTML = h; el.style.display = 'block'; if (!keep) el.scrollIntoView({ block: 'start' });
+  }
+  function cell(a, b) { return '<div class="cell"><span>' + a + '</span><b>' + b + '</b></div>'; }
+
+  function renderReview() {
+    var q = $('rSearch').value.toLowerCase(), t = $('rType').value;
+    var rows = D.review.filter(function (r) { return (!t || r['Issue Type'] === t) && (!q || Object.keys(r).some(function (k) { return String(r[k]).toLowerCase().indexOf(q) >= 0; })); }).sort(sorter('review'));
+    $('rCount').textContent = rows.length + ' of ' + D.review.length + ' items';
+    var cols = [{ h: 'Product', k: 'TruSea Product' }, { h: 'Issue', k: 'Issue Type' }, { h: 'Competitor', k: 'Competitor' }, { h: 'Competitor product', k: 'Competitor Product' }, { h: 'Detail', k: 'Detail' }, { h: 'Suggested action', k: 'Suggested Action' }];
+    $('tReview').innerHTML = head(cols, 'review') + '<tbody>' + rows.map(function (r) {
+      return '<tr class="click" data-id="' + esc(r['Master Product ID']) + '"><td>' + esc(r['TruSea Product']) + '</td><td class="' + cls(r['Issue Type']) + '">' + esc(r['Issue Type']) + '</td><td>' + esc(r['Competitor']) + '</td><td class="wrap">' + esc(r['Competitor Product']) + '</td><td class="wrap mute">' + esc(r['Detail']) + '</td><td class="wrap">' + esc(r['Suggested Action']) + '</td></tr>';
+    }).join('') + '</tbody>';
+  }
+  function renderHistory() {
+    var q = $('hSearch').value.toLowerCase(), ch = $('hChanged').checked;
+    var rows = D.history.filter(function (h) { return (!ch || h['Competitor Changed'] === 'YES') && (!q || (h['TruSea Product'] + ' ' + h['Lowest Competitor']).toLowerCase().indexOf(q) >= 0); }).sort(sorter('history')).slice(0, 500);
+    $('hCount').textContent = rows.length + ' rows (latest 500 shown)';
+    var cols = [{ h: 'Run time', k: 'Run Time' }, { h: 'Product', k: 'TruSea Product' }, { h: 'Prev comp ₹/kg', k: 'Prev Competitor ₹/kg', n: 1 }, { h: 'Current comp ₹/kg', k: 'Current Competitor ₹/kg', n: 1 }, { h: 'Changed', k: 'Competitor Changed' },
+      { h: 'Prev target pack', k: 'Prev Target Pack', n: 1 }, { h: 'Current target pack', k: 'Current Target Pack', n: 1 }, { h: 'Lowest competitor', k: 'Lowest Competitor' }, { h: 'Status', k: 'Final Status' }];
+    $('tHistory').innerHTML = head(cols, 'history') + '<tbody>' + rows.map(function (h) {
+      return '<tr class="click" data-id="' + esc(h['Master Product ID']) + '"><td>' + esc(h['Run Time']) + '</td><td>' + esc(h['TruSea Product']) + '</td><td class="n">' + rs(h['Prev Competitor ₹/kg']) + '</td><td class="n">' + rs(h['Current Competitor ₹/kg']) + '</td><td>' + esc(h['Competitor Changed']) + '</td><td class="n">' + rs(h['Prev Target Pack']) + '</td><td class="n">' + rs(h['Current Target Pack']) + '</td><td>' + esc(h['Lowest Competitor']) + '</td><td class="' + cls(h['Final Status']) + '">' + esc(h['Final Status']) + '</td></tr>';
+    }).join('') + '</tbody>';
+  }
+  function renderErrors() {
+    var st = D.status || {}, h = '';
+    if (st.state === 'error') h += '<p class="bad">Last run FAILED: ' + esc(st.step) + '</p><pre>' + esc(st.error) + '</pre>';
+    var errs = st.errors || [];
+    h += '<h3>Collection problems in last run (' + errs.length + ')</h3>';
+    h += errs.length ? '<div class="tbl"><table><thead><tr><th>Competitor</th><th>Product</th><th>Status</th><th>Notes</th><th>URL</th></tr></thead><tbody>' + errs.map(function (e) { return '<tr><td>' + esc(e.competitor) + '</td><td class="wrap">' + esc(e.product) + '</td><td class="bad">' + esc(e.status) + '</td><td class="wrap">' + esc(e.notes) + '</td><td class="wrap">' + esc(e.url) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="mute">None.</p>';
+    h += '<h3>Run log</h3><div class="tbl"><table><thead><tr><th>Run</th><th>Started</th><th>Finished</th><th>Status</th><th class="n">Products</th><th class="n">Rows checked</th><th class="n">Valid rows</th><th class="n">Errors</th></tr></thead><tbody>' +
+      D.log.slice().reverse().map(function (r) { return '<tr><td>' + esc(r['Run ID']) + '</td><td>' + esc(r['Started']) + '</td><td>' + esc(r['Finished']) + '</td><td class="' + (r['Status'] === 'COMPLETED' ? 'ok' : 'bad') + '">' + esc(r['Status']) + '</td><td class="n">' + esc(r['Products']) + '</td><td class="n">' + esc(r['Matches Checked']) + '</td><td class="n">' + esc(r['Valid Competitor Rows']) + '</td><td class="n">' + esc(r['Errors']) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    $('errBox').innerHTML = h;
+  }
+
+  /* ---------- run analysis ---------- */
+  var poll = null;
+  function runAnalysis() {
+    if (!cfg.url) { $('settings').style.display = 'block'; return say('Enter the Web App URL and token first', true); }
+    $('bRun').disabled = true; $('mStatus').textContent = 'RUNNING'; say('Starting analysis...');
+    poll = setInterval(function () { api({ action: 'status' }, 15000).then(function (d) { if (d.ok && d.status && d.status.state === 'running') say(d.status.step); }).catch(function () {}); }, 2000);
+    api({ action: 'run' }, 330000).then(function (d) {
+      clearInterval(poll); $('bRun').disabled = false;
+      if (!d.ok) { say('Run failed: ' + d.error, true); return load(); }
+      return load().then(function () { say('Analysis completed.'); });
+    }).catch(function (e) { clearInterval(poll); $('bRun').disabled = false; say(e.message + ' (the run may still be in progress - press Refresh in a minute)', true); });
+  }
+
+  /* ---------- events ---------- */
+  $('bRun').onclick = runAnalysis; $('bRefresh').onclick = load;
+  $('bSettings').onclick = function () { var s = $('settings'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; $('cfgUrl').value = cfg.url || ''; $('cfgToken').value = cfg.token || ''; };
+  $('bSave').onclick = function () { cfg = { url: $('cfgUrl').value.trim(), token: $('cfgToken').value }; localStorage.setItem(KEY, JSON.stringify(cfg)); $('settings').style.display = 'none'; load(); };
+  ['fSearch', 'fStatus', 'fMargin', 'fStock', 'fComp'].forEach(function (i) { $(i).oninput = function () { if (D) renderPricing(); }; });
+  ['rSearch', 'rType'].forEach(function (i) { $(i).oninput = function () { if (D) renderReview(); }; });
+  ['hSearch', 'hChanged'].forEach(function (i) { $(i).oninput = function () { if (D) renderHistory(); }; });
+  $('tabs').onclick = function (e) { var t = e.target.getAttribute('data-t'); if (!t) return; Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.className = b.getAttribute('data-t') === t ? 'on' : ''; });
+    Array.prototype.forEach.call(document.querySelectorAll('.panel'), function (p) { p.className = 'panel' + (p.id === 'p-' + t ? ' on' : ''); }); };
+  document.addEventListener('click', function (e) {
+    var th = e.target.closest('th[data-tab]');
+    if (th && D) { var tab = th.getAttribute('data-tab'), k = th.getAttribute('data-k'); sort[tab] = { k: k, d: sort[tab].k === k ? -sort[tab].d : 1 }; if (tab === 'pricing') renderPricing(); else if (tab === 'review') renderReview(); else renderHistory(); return; }
+    var b = e.target.closest('button[data-act]');
+    if (b) { say('Saving...'); api({ action: b.getAttribute('data-act') === 'use' ? 'setUse' : 'setStock', matchId: b.getAttribute('data-m'), value: b.getAttribute('data-v') }, 30000)
+      .then(function (d) { if (!d.ok) throw new Error(d.error); return load(); }).then(function () { say('Saved to sheet. Run the analysis again to apply.'); }).catch(function (er) { say(er.message, true); }); return; }
+    var tr = e.target.closest('tr.click');
+    if (tr && D) { if (!document.getElementById('p-pricing').classList.contains('on')) { document.querySelector('#tabs button[data-t=pricing]').click(); } showDetail(tr.getAttribute('data-id')); }
+  });
+  if (cfg.url && cfg.token) load(); else { $('settings').style.display = 'block'; say('Enter your Apps Script Web App URL and token to begin.'); }
+})();
+</script>
+</body>
+</html>
